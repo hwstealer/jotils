@@ -5,7 +5,9 @@ import string
 import builtins
 import tempfile
 import subprocess
+from io import IOBase
 from types import NoneType
+from typing import Callable, Dict, Any
 from string import templatelib
 from threading import Thread
 
@@ -132,6 +134,18 @@ swap = lambda cur, obj1, obj2: (obj1, obj2)[cur==obj1]
 exit = type("", tuple(), {"__repr__": exit, "__call__": exit})()
 
 
+# Get first element of an iterable, useful for unindexable objects, such as dict.keys
+def get1st(i):
+    for x in i: return x
+
+
+# Rename a function, if a different name makes more sense where it is used than where it is defined
+def func_rename(func, name):
+    func.__name__ = name
+    func.__qualname__ = name
+    return func
+
+
 # Generate a random "name" (ASCII compliant, no spaces, no number-start)
 def randStrId(charCount: int) -> str:
     if charCount <= 0: return ""
@@ -218,7 +232,24 @@ def notepad(s, pause=True):
         notepad(s)
         
     Thread(target=_tmp).start()
-        
+
+
+# Return a dict that maps prefixed functions' unprefixed name to itself
+# Ex (assuming prefix="GET_"): def GET_user(): ... -> {"user": GET_user}
+def funcMap(prefix: str, scopeDict: dict[str, Any]) -> Dict[str, Callable[..., Any]]:
+    return {
+        key[len(prefix):]: val 
+        for key, val in scopeDict.items()
+        if (key.startswith(prefix) and callable(val))
+        }
+
+
+# Return current value of `buf` and prepare it for subsequent writes
+def consumeBuf(buf: IOBase) -> Any:
+    data = buf.getvalue()
+    buf.__init__()
+    return data
+
 
 # Find all non-ASCII characters in string
 def _findNonASCII(content: str):
