@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import random
 import string
@@ -11,20 +12,22 @@ from typing import Callable, Dict, Any
 from string import templatelib
 from threading import Thread
 
-try: from .randName import randName
-except ImportError: from randName import randName
 
-if os.name == "nt":
-    try: from . import clipboard
-    except ImportError: import clipboard
+if __file__.endswith("jotils.py"):
+    # We are in the "fake/proxy" jotils file, nothing in this file will actually be loaded.
+    pass
+else:
+    sys.path.append(__file__[:-len("x__init__.py")])
+    from randName import randName
 
-    cb = clipboard.generic
-    cbmod = clipboard.mod
-    cbundo = clipboard.undo
+    if os.name == "nt":
+        import clipboard
 
-try: from .extras import *
-except ImportError:
-    try: from extras import *
+        cb = clipboard.generic
+        cbmod = clipboard.mod
+        cbundo = clipboard.undo
+
+    try: from .extras import *
     except ImportError: pass # Running without extras.
 
 
@@ -413,5 +416,35 @@ def vstr(ts: templatelib.Template):
             
     except StopIteration:
         return retStr[:-1]
+    
 
+# Make a link to *this* file from wherever this is called from
+def localJotils():
+    global jotilsFile, my_module
 
+    def syncFile():
+        realFile = file2s(jotilsFile)
+        warningText = f"# DON'T MODIFY ME: This file is a proxy to {jotilsFile}\n\njotilsFile={repr(jotilsFile)}\n\n"
+        realFile = warningText + realFile
+    
+        with open("jotils.py", "w+") as file:
+            file.write(realFile)
+
+    if __file__.endswith("jotils.py"):
+        # We are inside the fake "jotils.py"
+        syncFile()
+        # If the "real lib" has been updated, *this* instance of the file
+        # is "old", so we need to import the real lib just in case.
+        # This is so damn ugly I wanna puke.
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("jotils", jotilsFile)
+        my_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(my_module)
+
+        for var in dir(my_module):
+            setattr(sys.modules[__name__], var, getattr(my_module, var))
+
+    else:
+        # We are inside the real jotils lib (__init__.py)
+        jotilsFile = __file__
+        syncFile()
