@@ -197,11 +197,14 @@ def x2s(x):
     return x if isinstance(x, str) else repr(x)
 
 
-def to_primitive(obj):
+def isPrimitive(obj):
+    "Return True if 'obj' is a primitive type, False otherwise"
+    return isinstance(obj, (str, int, float, bytes, NoneType))
+
+
+def x2primitive(obj):
     "Return 'obj' if 'obj' is 'primitive', otherwise return json.dumps(obj)"
-    if isinstance(obj, (str, int, float, bytes, NoneType)):
-        return obj
-    return json.dumps(obj)
+    return obj if isPrimitive(obj) else json.dumps(obj)
 
 
 def binex(i: int, padFor=0, nibbleSep=" ", byteSep=" | ") -> str:
@@ -299,38 +302,60 @@ def trunc(s: str, cut: int = 10, ellipsis: str = "…"):
     return s[:cut-len(ellipsis)]+ellipsis if len(s) > cut else s
 
 
-def qview(obj, width: int = 50, depth: int = 1, _indent=0, _offset=0):
-    "Provide a quick view of the object"
+def dictify(obj):
+    "Return an 'obj.__dict__' style object"
+    return {name: getattr(obj, name) for name in dir(obj)}
+
+
+def _qview(obj, depth: int = 1, height: int = 20, width: int = 80, _indent=0, _offset=0):
+    height-= 1
+
+    if not height:
+        return print("\n"+r"\/"*(width//2))
+    
     if (width-_indent) < 4:
-        print(r"\/"*(width//2))
-        return
+        print("\n"+r"\/"*(width//2))
+        return height
     
     print(trunc(f"{type(obj)}: {repr(obj)}", width-_offset))
     if not isinstance(obj, dict):
-        if isinstance(obj, str): return
-        if hasattr(obj, "__iter__"):
+        if isPrimitive(obj): return height
+        elif hasattr(obj, "__iter__"):
             _counter = -1
             obj = {(_counter := (_counter+1)): x for x in obj}
-        else: return
+        elif hasattr(obj, "__dict__"):
+            obj = obj.__dict__
+        else:
+            obj = dictify(obj)
         
     # Now we have a dict to work with
     for key in obj:
         if hasattr(obj[key], "__iter__") and depth > 1:
-            # The value itself is iterable
-            if isinstance(obj[key], dict) or (
-                    any(map(
-                        lambda x: hasattr(x, "__iter__") and not isinstance(x, str),
-                        obj[key]
-                        )) and True
-                    
-                    #getattr(obj[key], "__len__",  lambda: 0)() != 0 and
-                    #type(obj[key]) != type(obj[key][0])
-                ):
+            # The value itself is iterable. If this value is an iterable of "primitive" values, we
+            # don't need to recurse into it, otherwise we do.
+            if any(x for x in obj[key] if (not isPrimitive(x)) or hasattr(x, "__iter__")):
+                # If any of the values are not primitive, or it contains a dict, we
+                # recurse into the value.
                 prefix = trunc(f"{' '*_indent}{key}: ", width)
                 print(prefix, end="")
-                qview(obj[key], width, depth-1, _indent+2, len(prefix))
+                height = _qview(obj[key], depth=depth-1, height=height, width=width, _indent=_indent+2, _offset=len(prefix))
+                if not height: return
                 continue
+        
         print(trunc(f"{' '*_indent}{repr(key)}: {repr(obj[key])}", width))
+        height-= 1
+
+        if not height:
+            return print(r"\/"*(width//2))
+
+    return height
+
+
+def qview(obj, depth: int = 1, height: int = 20, width: int = 78):
+    "Provide a quick view of the object"
+    if height == 1:
+        print(trunc(f"{type(obj)}: {repr(obj)}", width))
+    _qview(obj, depth=depth, height=height, width=width, _indent=0, _offset=0)
         
 
 def fixMyNewlines(raw: str):
