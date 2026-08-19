@@ -245,13 +245,13 @@ def notepad(s, pause=True):
     Thread(target=_tmp).start()
 
 
-def funcMap(prefix: str, scopeDict: dict[str, Any]) -> Dict[str, Callable[..., Any]]:
+def funcMap(prefix: str, scopeDict: dict[str, Any], cast: Callable = None) -> Dict[str, Callable[..., Any]]:
     """Return a dict that maps prefixed functions' unprefixed name to itself
     
     Ex (assuming prefix="GET_"): def GET_user(): ... -> {"user": GET_user}"""
-
+    cast = cast or (lambda x: x)
     return {
-        key[len(prefix):]: val 
+        cast(key[len(prefix):]): val 
         for key, val in scopeDict.items()
         if (key.startswith(prefix) and callable(val))
         }
