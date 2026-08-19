@@ -140,7 +140,11 @@ exit = type("", tuple(), {"__repr__": exit, "__call__": exit})()
 
 
 def get1st(i):
-    "Get first element of an iterable, useful for unindexable objects, such as dict.keys"
+    """Get first element of an iterable, useful for unindexable objects, such as dict.keys
+    
+    To avoid call overhead, use:
+    `for x in i: break`
+    """
     for x in i: return x
 
 
@@ -414,8 +418,8 @@ def parseInts(s: str) -> list[int]:
 
 def binCmpDmp(arr: list[int]):
     "Dump ints in binary format to stdout, largest value first"
-    nums = tuple(sorted(arr, reverse=True))
-    numBytes = sizeofInt(nums[0])
+    nums = sorted(arr, reverse=True)
+    numBytes = sizeofInt(get1st(nums))
     [print(binex(num, numBytes)) for num in nums]
 
 
