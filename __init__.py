@@ -232,10 +232,10 @@ def file2s(fileName: str) -> str:
     return content
 
 
-def notepad(s, pause=True):
+def notepad(s: Any, pause: bool = True):
     "Open a string in notepad (tempfile)"
     if pause:
-        s = s if isinstance(s, bytes) else s.encode(errors="replace")
+        s = s if isinstance(s, bytes) else x2s(s).encode(errors="replace")
         with tempfile.TemporaryFile("wb", delete_on_close=False) as fp:
             fp.write(s)
             fp.close()
