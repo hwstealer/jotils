@@ -90,7 +90,7 @@ def setBytes(data: bytes) -> bool:
         user32.EmptyClipboard()
 
         # Allocate global memory for the text; GMEM_MOVEABLE = 0x0002, GMEM_ZEROINIT = 0x0040
-        hClipMem = kernel32.GlobalAlloc(0x2002 | 0x0040, bufferSize)
+        hClipMem = kernel32.GlobalAlloc(0x2002, bufferSize)
         if not hClipMem:
             return False
 
@@ -122,6 +122,51 @@ def setBytes(data: bytes) -> bool:
     return True
 
 
+def setString(data: str) -> bool:
+
+    # Open the clipboard
+    if not user32.OpenClipboard(0):
+        return False
+
+    try:
+        # Empty the clipboard
+        user32.EmptyClipboard()
+
+        # Allocate global memory block for a UTF-16 null-terminated string
+        # UTF-16 uses 2 bytes per character, plus 2 bytes for the terminal null character
+        bufferSize = (len(data) + 1) * 2
+        hClipMem = kernel32.GlobalAlloc(0x0002, bufferSize)
+        if not hClipMem:
+            return False
+
+        # Lock the memory and get a pointer to it
+        pClipMem = kernel32.GlobalLock(hClipMem)
+        if not pClipMem:
+            kernel32.GlobalFree(hClipMem)
+            return False
+
+        try:
+            ctypes.cdll.msvcrt.wcscpy(ctypes.c_wchar_p(pClipMem), data)
+
+            # Set the clipboard data for text format; CF_UNICODETEXT = 13
+            if not user32.SetClipboardData(13, hClipMem):
+                # If setting data fails, free the allocated memory
+                kernel32.GlobalFree(hClipMem)
+                return False
+
+            # Memory is now owned by the clipboard, do not free it.
+            hClipMem = None
+
+        finally:
+            if pClipMem:
+                kernel32.GlobalUnlock(hClipMem)
+
+    finally:
+        user32.CloseClipboard()
+
+    return True
+
+
 
 def get() -> str:
     raw = getBytes()
@@ -131,7 +176,7 @@ def get() -> str:
 
 
 def set(x) -> bool:
-    return setBytes(x if isinstance(x, bytes) else (x if isinstance(x, str) else repr(x)).encode())
+    return setBytes(x) if isinstance(x, bytes) else setString(x if isinstance(x, str) else repr(x))
 
 
 def generic(x=None):
