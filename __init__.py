@@ -7,7 +7,7 @@ import builtins
 import tempfile
 import subprocess
 from io import IOBase
-from types import NoneType
+from types import NoneType, MethodType
 from typing import Callable, Dict, Any
 from string import templatelib
 from threading import Thread
@@ -150,6 +150,7 @@ def get1st(i):
 
 def func_rename(func, name):
     "Rename a function, if a different name makes more sense where it is used than where it is defined"
+    if isinstance(func, MethodType): func = func.__func__
     func.__name__ = name
     func.__qualname__ = name
     return func
@@ -309,6 +310,7 @@ def trunc(s: str, cut: int = 10, ellipsis: str = "…"):
 def dictify(obj):
     "Return an 'obj.__dict__' style object"
     return {name: getattr(obj, name) for name in dir(obj)}
+    # Test dict: {"status": "success", "meta": {"count": 2, "page": 1}, "data": [{"id": "usr_9823", "profile": {"personal": {"first_name": "Alex", "last_name": "Smith", "contacts": [{"type": "email", "value": "alex@example.com", "verified": True}, {"type": "phone", "value": "+15550199", "verified": False}]}, "preferences": {"theme": "dark", "notifications": {"email": True, "sms": False, "push": True}}}}, {"id": "usr_9824", "profile": {"personal": {"first_name": "Jamie", "last_name": "Doe", "contacts": [{"type": "email", "value": "jamie@example.com", "verified": True}]}, "preferences": {"theme": "light", "notifications": {"email": False, "sms": False, "push": True}}}}]}
 
 
 def _qview(obj, depth: int = 1, height: int = 20, width: int = 80, _indent=0, _offset=0):
