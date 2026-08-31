@@ -1,6 +1,8 @@
 import random
+from collections.abc import Hashable
 
-def randName(obj=None) -> str:
+
+def randName(obj: Hashable = None) -> str:
     firstNamecount = min(len(raw["boys"]), len(raw["girls"]))
     lastNameCount = len(raw["last"])
     combinations = lastNameCount * firstNamecount * 2
@@ -8,8 +10,8 @@ def randName(obj=None) -> str:
     hashed = (hash(obj) & (combinations-1)) if obj else random.randint(0, combinations-1)
     return raw[["boys", "girls"][hashed&1]][hashed%firstNamecount] + raw["last"][hashed%lastNameCount]
 
-raw = {
-  "year": 1905,
+raw: dict[str, list[str]] = {
+  "year": 1905,  # pyright: ignore[reportAssignmentType]
   "girls": [
     "Mary",
     "Helen",

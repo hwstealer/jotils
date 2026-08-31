@@ -1,8 +1,13 @@
 # this is mostly frankensteined ChatGPT-4 code
+# pyright: reportAny=false
+# pyright: reportExplicitAny=false
+
 
 import ctypes
+from collections.abc import Callable
 from ctypes import wintypes
 from string import printable
+from typing import Any
 
 printableBytes = printable.encode()
 
@@ -69,8 +74,8 @@ def getBytes() -> bytes:
     try:
         # Assuming the data is null-terminated text for simplicity
         data = ctypes.cast(lockedMem, ctypes.c_char_p).value
-        return data
-    
+        return data or b""
+
     finally:
         user32.CloseClipboard()
         if not kernel32.GlobalUnlock(handle):
@@ -175,21 +180,29 @@ def get() -> str:
         return bytes([c for c in raw if c in printableBytes]).decode()
 
 
-def set(x) -> bool:
+def set(x: Any) -> bool:
     return setBytes(x) if isinstance(x, bytes) else setString(x if isinstance(x, str) else repr(x))
 
 
-def generic(x=None):
+def generic(x: None | Any = None):
     return get() if x is None else set(x)
 
 
 # Modify clipboard by applying a chain of functions.
 # Ex: `mod((int, 16), bin)` will be logically equivalent to set(bin(int(get(), 16)))
 _undo = None
-def mod(*args):
+def mod(*args: Callable[..., Any] | tuple[Callable[..., Any], ...]) -> None:
+    """Modify clipboard content by applying a chain of functions.
+
+    Each argument is either a callable applied to the current result,
+    or a tuple of (callable, *args) applied as ``callable(current, *args)``.
+
+    Example: ``mod((int, 16), bin)`` converts the clipboard text from
+    hexadecimal to integer, then to its binary string representation.
+    """
     global _undo
     _undo = get()
-    
+
     res = _undo
     for arg in args:
         res = arg(res) if callable(arg) else arg[0](res, *arg[1:])
