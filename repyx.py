@@ -146,7 +146,7 @@ class Client:
                 continue
 
             if cmd == "exit":
-                return print("Exiting JC.")
+                return
 
             self.server.send( cmd.encode(errors="replace") )
 
