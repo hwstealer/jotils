@@ -9,6 +9,7 @@ import string
 import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Callable, Iterable
 from io import StringIO
 from string import templatelib
@@ -461,6 +462,26 @@ def vstr(ts: templatelib.Template):
 
     except StopIteration:
         return retStr[:-1]
+
+
+def writeOut(text: str, delay: float = 5.0, speed: float = 0):
+    from pynput import keyboard
+    c = keyboard.Controller()
+    time.sleep(delay)
+
+    if not speed:
+        return c.type(text)
+
+    _run = True
+    def _stop():
+        nonlocal _run
+        _run = False
+
+    with keyboard.GlobalHotKeys({'<esc>': _stop}) as _:
+        for char in text:
+            if not _run: return
+            c.type(char)
+            time.sleep(speed)
 
 
 def localJotils():
